@@ -194,6 +194,8 @@
                     csvContent += rowContent + "\n";
                 });
 
+                //append total 
+                csvContent += `\n,,Total,${total.toFixed(2)}\n`;
                 const blob = new Blob([csvContent], { type: 'text/csv' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
