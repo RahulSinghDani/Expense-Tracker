@@ -5,8 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Expense Tracker</title>
-    <meta name="keywords" content="expense tracker, budget management, finance, personal finance, expense management, budget tracker, financial planning, money management">
-    
+    <meta name="keywords"
+        content="expense tracker, budget management, finance, personal finance, expense management, budget tracker, financial planning, money management">
+
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -88,33 +89,81 @@
         .closebtn:hover {
             color: black;
         }
+
+        /* for button */
+        /* General Button Styles */
+        button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background-color: #1d6bb3;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+        /* Hover Effects */
+        button:hover {
+            background-color: #1151b1;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Active Effects */
+        button:active {
+            background-color: #168a26;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Disabled State */
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Language Toggle Button */
+        .lang-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: #f1c40f;
+            color: #000;
+        }
+
         footer p {
+            text-align: center;
             margin: 0;
             color: #555;
-            text-align: center;
         }
     </style>
 </head>
 
 <body>
+    <button id="toggleLang" class="lang-toggle">Switch to Hindi</button>
     <div class="container">
         <form id="expenseForm">
-            <h1>Expense Tracker</h1>
-            <input type="date" id="date" required /><br>
+            <h1 id="title">Expense Tracker</h1>
+            <input type="date" id="date" required max=""/><br>
             <input type="text" id="description" placeholder="Expense Description" required /><br>
             <select id="category" required>
                 <option value="">Select category</option>
                 <option value="Food">Food</option>
-                <option value="Books/study">Book/Study</option>
+                <option value="Books/study">Books/Study</option>
                 <option value="Entertainment">Entertainment</option>
                 <option value="Transportation">Transportation</option>
                 <option value="Utilities">Utilities</option>
                 <option value="Others">Others</option>
             </select><br>
-            <input type="number" placeholder="Amount" id="amount" required> <br>
+            <input type="number" placeholder="Amount" id="amount" required><br>
             <input type="submit" value="Add Expense" id="addExpense">
         </form>
-        <h3>Expense Summary</h3>
+        <h3 id="summaryTitle">Expense Summary</h3>
         <table id="expenseTable">
             <thead>
                 <tr>
@@ -132,17 +181,21 @@
                 </tr>
             </tfoot>
         </table>
-        <button id="downloadButton">Download CSV</button>
+        <button id="downloadButton">Download as CSV</button>
+        <button id="downloadPDFButton">Download as PDF</button>
 
         <!-- Alert Box -->
         <div id="alertBox" class="alert">
             <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
-            <strong>Warning!</strong> No data available to download.
+            <strong id="alertText">Warning!</strong> No data available to download.
         </div>
     </div>
     <footer>
         <p>© 2024 Rahul Singh Dani - Developer</p>
     </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.13/jspdf.plugin.autotable.min.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', (event) => {
@@ -150,13 +203,71 @@
             const expenseList = document.getElementById('expenseList');
             const totalAmount = document.getElementById('totalAmount');
             const downloadButton = document.getElementById('downloadButton');
+            const downloadPDFButton = document.getElementById('downloadPDFButton');
             const alertBox = document.getElementById('alertBox');
+            const toggleLangButton = document.getElementById('toggleLang');
+            const title = document.getElementById('title');
+            const summaryTitle = document.getElementById('summaryTitle');
+            const alertText = document.getElementById('alertText');
             let total = 0;
+            let currentLang = 'en';
+
+            const translations = {
+                en: {
+                    title: 'Expense Tracker',
+                    datePlaceholder: 'Expense Description',
+                    categoryPlaceholder: 'Select category',
+                    amountPlaceholder: 'Amount',
+                    addExpense: 'Add Expense',
+                    summaryTitle: 'Expense Summary',
+                    total: 'Total',
+                    downloadCSV: 'Download as CSV',
+                    downloadPDF: 'Download as PDF',
+                    alertText: 'Warning! No data available to download.',
+                    langButton: 'Switch to Hindi'
+                },
+                hi: {
+                    title: 'व्यय ट्रैकर',
+                    datePlaceholder: 'व्यय विवरण',
+                    categoryPlaceholder: 'श्रेणी का चयन करें',
+                    amountPlaceholder: 'राशि',
+                    addExpense: 'व्यय जोड़ें',
+                    summaryTitle: 'व्यय सारांश',
+                    total: 'कुल',
+                    downloadCSV: 'CSV के रूप में डाउनलोड करें',
+                    downloadPDF: 'PDF के रूप में डाउनलोड करें',
+                    alertText: 'चेतावनी! डाउनलोड करने के लिए कोई डेटा उपलब्ध नहीं है।',
+                    langButton: 'अंग्रेज़ी में बदलें'
+                }
+            };
+
+            function updateLanguage(lang) {
+                title.textContent = translations[lang].title;
+                document.getElementById('description').placeholder = translations[lang].datePlaceholder;
+                document.getElementById('category').firstChild.textContent = translations[lang].categoryPlaceholder;
+                document.getElementById('amount').placeholder = translations[lang].amountPlaceholder;
+                document.getElementById('addExpense').value = translations[lang].addExpense;
+                summaryTitle.textContent = translations[lang].summaryTitle;
+                document.getElementById('totalRow').cells[0].textContent = translations[lang].total;
+                downloadButton.textContent = translations[lang].downloadCSV;
+                downloadPDFButton.textContent = translations[lang].downloadPDF;
+                alertText.textContent = translations[lang].alertText;
+                toggleLangButton.textContent = translations[lang].langButton;
+            }
+
+            toggleLangButton.addEventListener('click', () => {
+                currentLang = currentLang === 'en' ? 'hi' : 'en';
+                updateLanguage(currentLang);
+            });
+
+            const dateInput = document.getElementById('date');
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.setAttribute('max', today);
 
             expenseForm.addEventListener('submit', function (event) {
                 event.preventDefault();
 
-                const date = document.getElementById('date').value;
+                const date = dateInput.value;
                 const description = document.getElementById('description').value;
                 const category = document.getElementById('category').value;
                 const amount = parseFloat(document.getElementById('amount').value);
@@ -170,7 +281,6 @@
                     total += amount;
                     totalAmount.textContent = total.toFixed(2);
 
-                    // Clear the input fields
                     document.getElementById('date').value = '';
                     document.getElementById('description').value = '';
                     document.getElementById('category').value = '';
@@ -194,8 +304,8 @@
                     csvContent += rowContent + "\n";
                 });
 
-                //append total 
-                csvContent += `\n,,Total,${total.toFixed(2)}\n`;
+                csvContent += `\n,,${translations[currentLang].total},${total.toFixed(2)}\n`;
+
                 const blob = new Blob([csvContent], { type: 'text/csv' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -205,6 +315,30 @@
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
+            });
+
+            downloadPDFButton.addEventListener('click', function () {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                let rows = [];
+                document.querySelectorAll('#expenseTable tbody tr').forEach(row => {
+                    let cols = Array.from(row.querySelectorAll('td')).map(td => td.innerText);
+                    rows.push(cols);
+                });
+
+                if (rows.length < 1) {
+                    alertBox.style.display = 'block';
+                    return;
+                }
+
+                doc.autoTable({
+                    head: [['Date', 'Description', 'Category', 'Amount']],
+                    body: rows,
+                    foot: [['', '', translations[currentLang].total, totalAmount.textContent]]
+                });
+
+                doc.save('expense_tracker.pdf');
             });
         });
     </script>
